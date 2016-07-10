@@ -115,15 +115,15 @@ void setup(void)
 
   /* Enable HID Service */
   Serial.println(F("Enable HID Service (including Keyboard): "));
-  if ( ble.isVersionAtLeast(MINIMUM_FIRMWARE_VERSION) ) {
+//  if ( ble.isVersionAtLeast(MINIMUM_FIRMWARE_VERSION) ) {
     if ( !ble.sendCommandCheckOK(F( "AT+BleHIDEn=On" ))) {
       error(F("Could not enable Keyboard"));
     }
-  } else {
-    if (! ble.sendCommandCheckOK(F( "AT+BleKeyboardEn=On"  ))) {
-      error(F("Could not enable Keyboard"));
-    }
-  }
+//  } else {
+//    if (! ble.sendCommandCheckOK(F( "AT+BleKeyboardEn=On"  ))) {
+//      error(F("Could not enable Keyboard"));
+//    }
+//  }
 
   /* Add or remove service requires a reset */
   Serial.println(F("Performing a SW reset (service changes require a reset): "));
@@ -205,7 +205,8 @@ void loop(void)
   //Serial.print(F("keyboard > "));
 
   // Check for user input and echo it back if anything was found
-  char keys[BUFSIZE+1];
+  //char keys[BUFSIZE+1];
+  char keys[] = {'\0', '\n'};
   //getUserInput(keys, BUFSIZE);
 
   int c = getKey();
@@ -224,7 +225,7 @@ void loop(void)
       Serial.println(F("FAILED!"));
     }
   }
-  delay(100);
+  delay(500);
 }
 
 /**************************************************************************/
