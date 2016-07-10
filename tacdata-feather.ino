@@ -75,32 +75,25 @@ void error(const __FlashStringHelper*err) {
   while (1);
 }
 
-/**************************************************************************/
-/*!
-    @brief  Sets up the HW an the BLE module (this function is called
-            automatically on startup)
+/*
+ Set up the HW and the BLE module. the setup function runs once when you press reset or power the board.
 */
-/**************************************************************************/
 void setup(void)
 {
   while (!Serial);  // required for Flora & Micro
   delay(500);
 
   Serial.begin(115200);
-  Serial.println(F("Adafruit Bluefruit HID Keyboard Example"));
-  Serial.println(F("---------------------------------------"));
+  Serial.println(F("HID Keyboard"));
 
   /* Initialise the module */
   Serial.print(F("Initialising the Bluefruit LE module: "));
-
-  if ( !ble.begin(VERBOSE_MODE) )
-  {
+  if ( !ble.begin(VERBOSE_MODE) ) {
     error(F("Couldn't find Bluefruit, make sure it's in CoMmanD mode & check wiring?"));
   }
   Serial.println( F("OK!") );
 
-  if ( FACTORYRESET_ENABLE )
-  {
+  if ( FACTORYRESET_ENABLE ) {
     /* Perform a factory reset to make sure everything is in a known state */
     Serial.println(F("Performing a factory reset: "));
     if ( ! ble.factoryReset() ){
@@ -110,10 +103,9 @@ void setup(void)
 
   /* Disable command echo from Bluefruit */
   ble.echo(false);
-
+  
   Serial.println("Requesting Bluefruit info:");
-  /* Print Bluefruit information */
-  ble.info();
+  ble.info(); /* Print Bluefruit information */
 
   /* Change the device name to make it easier to find */
   Serial.println(F("Setting device name to 'Bluefruit Keyboard': "));
@@ -123,13 +115,11 @@ void setup(void)
 
   /* Enable HID Service */
   Serial.println(F("Enable HID Service (including Keyboard): "));
-  if ( ble.isVersionAtLeast(MINIMUM_FIRMWARE_VERSION) )
-  {
+  if ( ble.isVersionAtLeast(MINIMUM_FIRMWARE_VERSION) ) {
     if ( !ble.sendCommandCheckOK(F( "AT+BleHIDEn=On" ))) {
       error(F("Could not enable Keyboard"));
     }
-  }else
-  {
+  } else {
     if (! ble.sendCommandCheckOK(F( "AT+BleKeyboardEn=On"  ))) {
       error(F("Could not enable Keyboard"));
     }
@@ -155,6 +145,55 @@ void setup(void)
   Serial.println();
 }
 
+/* 
+ * enable pull-up resistor for switch and invert polarity of signal on selected IO pins.
+ * 
+ * https://www.arduino.cc/en/Reference/HomePage
+ */
+void enableInput() {  
+  // Using analog pins for digital input
+  // https://www.arduino.cc/en/Tutorial/AnalogInputPins
+  pinMode(A0, INPUT);
+  pinMode(A1, INPUT);
+  pinMode(A2, INPUT);
+  pinMode(A3, INPUT);
+  pinMode(A4, INPUT);
+  pinMode(A5, INPUT);
+  digitalWrite(A0, HIGH);  // set pullup on analog pin
+  digitalWrite(A1, HIGH);
+  digitalWrite(A2, HIGH);
+  digitalWrite(A3, HIGH);
+  digitalWrite(A4, HIGH);
+  digitalWrite(A5, HIGH);
+  
+  // set digital pins to INPUT_PULLUP
+  // https://www.arduino.cc/en/Reference/PinMode
+  for (int pin = 0; pin <= 12; pin++) {
+    // pin 4,7,8 control BLE
+    if (pin == 4 || pin == 7 || pin == 8) {
+      continue;
+    }
+    // do pins 2 (SDA) and3 (SCL) have pullup resistors?
+    pinMode(pin, INPUT_PULLUP);
+  }  
+}
+
+
+int keymap[] = {'a', 'b', 'c', 'd', -1, 'e', 'f', -1, -1, 'h', 'i', 'j', 'k'};
+  
+int getKey() {
+  for (int pin = 0; pin <= 12; pin++) {
+    // pin 4,7,8 control BLE
+    if (pin == 4 || pin == 7 || pin == 8) {
+      continue;
+    }
+    if (!digitalRead(pin)) {
+      return keymap[pin];
+    }
+  }
+  return -1;
+}
+
 /**************************************************************************/
 /*!
     @brief  Constantly poll for new command or response data
@@ -163,25 +202,29 @@ void setup(void)
 void loop(void)
 {
   // Display prompt
-  Serial.print(F("keyboard > "));
+  //Serial.print(F("keyboard > "));
 
   // Check for user input and echo it back if anything was found
   char keys[BUFSIZE+1];
-  getUserInput(keys, BUFSIZE);
+  //getUserInput(keys, BUFSIZE);
 
-  Serial.print("\nSending ");
-  Serial.println(keys);
-
-  ble.print("AT+BleKeyboard=");
-  ble.println(keys);
-
-  if( ble.waitForOK() )
-  {
-    Serial.println( F("OK!") );
-  }else
-  {
-    Serial.println( F("FAILED!") );
+  int c = getKey();
+  
+  if (c > -1) {
+    keys[0] = (char) c;
+    Serial.print("\nSending ");
+    Serial.println(keys);
+  
+    ble.print("AT+BleKeyboard=");
+    ble.println(keys);
+  
+    if (ble.waitForOK()) {
+      Serial.println(F("OK!"));
+    } else {
+      Serial.println(F("FAILED!"));
+    }
   }
+  delay(100);
 }
 
 /**************************************************************************/
