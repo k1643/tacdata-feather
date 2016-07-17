@@ -84,7 +84,7 @@ void setup(void)
   delay(500);
 
   Serial.begin(115200);
-  Serial.println(F("HID Keyboard"));
+  Serial.println(F("tacdata-feather HID Keyboard"));
 
   /* Initialise the module */
   Serial.print(F("Initialising the Bluefruit LE module: "));
@@ -130,6 +130,8 @@ void setup(void)
   if (! ble.reset() ) {
     error(F("Couldn't reset??"));
   }
+
+  enableInput(); // set input pins for digitalRead
 
   Serial.println();
   Serial.println(F("Go to your phone's Bluetooth settings to pair your device"));
@@ -178,10 +180,40 @@ void enableInput() {
   }  
 }
 
+/*
+ * show current state of input pins
+ */
+void showState() {
+  char state[] = "state:_00000000_00000000";
 
+  Serial.print("analog pins ");
+  for (int i = 0; i < 6; i++) {
+    Serial.print(A0+i, DEC);
+    Serial.print(" ");
+    state[7+i] = digitalRead(A0+i) == HIGH ? '0' : '1'; // using INPUT_PULLUP reverses LOW,HIGH
+  }
+  Serial.println();
+  state[7+6] = digitalRead(0) == HIGH ? '0' : '1';
+  state[7+7] = digitalRead(1) == HIGH ? '0' : '1';
+  int stringi = 7+9;
+  for (int pin = 2; pin <= 12; pin++) {
+    // pin 4,7,8 control BLE
+    if (pin == 4 || pin == 7 || pin == 8) {
+      continue;
+    }
+    state[stringi++] = digitalRead(pin) == HIGH ? '0' : '1';
+  }
+  
+  Serial.println(state);
+}
+
+int currKey = 0;
 int keymap[] = {'a', 'b', 'c', 'd', -1, 'e', 'f', -1, -1, 'h', 'i', 'j', 'k'};
   
 int getKey() {
+
+  // pins 0-5 are low pin 6 is HIGH
+  //
   for (int pin = 0; pin <= 12; pin++) {
     // pin 4,7,8 control BLE
     if (pin == 4 || pin == 7 || pin == 8) {
@@ -201,12 +233,17 @@ int getKey() {
 /**************************************************************************/
 void loop(void)
 {
+  delay(500);
+  showState();
+  return;
+  
   // Display prompt
   //Serial.print(F("keyboard > "));
 
   // Check for user input and echo it back if anything was found
-  //char keys[BUFSIZE+1];
-  char keys[] = {'\0', '\n'};
+  char keys[BUFSIZE+1];
+  memset(keys, 0, BUFSIZE);
+  //char keys[] = {'\0', '\n'};
   //getUserInput(keys, BUFSIZE);
 
   int c = getKey();
