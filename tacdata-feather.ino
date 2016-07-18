@@ -7,9 +7,7 @@
 
 #include <Arduino.h>
 #include <SPI.h>
-#if not defined (_VARIANT_ARDUINO_DUE_X_) && not defined(ARDUINO_ARCH_SAMD)
-  #include <SoftwareSerial.h>
-#endif
+#include <SoftwareSerial.h>
 
 #include "Adafruit_BLE.h"
 #include "Adafruit_BluefruitLE_SPI.h"
@@ -50,24 +48,8 @@
 /*=========================================================================*/
 
 
-// Create the bluefruit object, either software serial...uncomment these lines
-/*
-SoftwareSerial bluefruitSS = SoftwareSerial(BLUEFRUIT_SWUART_TXD_PIN, BLUEFRUIT_SWUART_RXD_PIN);
-
-Adafruit_BluefruitLE_UART ble(bluefruitSS, BLUEFRUIT_UART_MODE_PIN,
-                      BLUEFRUIT_UART_CTS_PIN, BLUEFRUIT_UART_RTS_PIN);
-*/
-
-/* ...or hardware serial, which does not need the RTS/CTS pins. Uncomment this line */
-// Adafruit_BluefruitLE_UART ble(BLUEFRUIT_HWSERIAL_NAME, BLUEFRUIT_UART_MODE_PIN);
-
 /* ...hardware SPI, using SCK/MOSI/MISO hardware SPI pins and then user selected CS/IRQ/RST */
 Adafruit_BluefruitLE_SPI ble(BLUEFRUIT_SPI_CS, BLUEFRUIT_SPI_IRQ, BLUEFRUIT_SPI_RST);
-
-/* ...software SPI, using SCK/MOSI/MISO user-defined SPI pins and then user selected CS/IRQ/RST */
-//Adafruit_BluefruitLE_SPI ble(BLUEFRUIT_SPI_SCK, BLUEFRUIT_SPI_MISO,
-//                             BLUEFRUIT_SPI_MOSI, BLUEFRUIT_SPI_CS,
-//                             BLUEFRUIT_SPI_IRQ, BLUEFRUIT_SPI_RST);
 
 // A small helper
 void error(const __FlashStringHelper*err) {
@@ -115,15 +97,9 @@ void setup(void)
 
   /* Enable HID Service */
   Serial.println(F("Enable HID Service (including Keyboard): "));
-//  if ( ble.isVersionAtLeast(MINIMUM_FIRMWARE_VERSION) ) {
-    if ( !ble.sendCommandCheckOK(F( "AT+BleHIDEn=On" ))) {
-      error(F("Could not enable Keyboard"));
-    }
-//  } else {
-//    if (! ble.sendCommandCheckOK(F( "AT+BleKeyboardEn=On"  ))) {
-//      error(F("Could not enable Keyboard"));
-//    }
-//  }
+  if ( !ble.sendCommandCheckOK(F( "AT+BleHIDEn=On" ))) {
+    error(F("Could not enable Keyboard"));
+  }
 
   /* Add or remove service requires a reset */
   Serial.println(F("Performing a SW reset (service changes require a reset): "));
@@ -136,14 +112,6 @@ void setup(void)
   Serial.println();
   Serial.println(F("Go to your phone's Bluetooth settings to pair your device"));
   Serial.println(F("then open an application that accepts keyboard input"));
-
-  Serial.println();
-  Serial.println(F("Enter the character(s) to send:"));
-  Serial.println(F("- \\r for Enter"));
-  Serial.println(F("- \\n for newline"));
-  Serial.println(F("- \\t for tab"));
-  Serial.println(F("- \\b for backspace"));
-
   Serial.println();
 }
 
@@ -155,18 +123,10 @@ void setup(void)
 void enableInput() {  
   // Using analog pins for digital input
   // https://www.arduino.cc/en/Tutorial/AnalogInputPins
-  pinMode(A0, INPUT);
-  pinMode(A1, INPUT);
-  pinMode(A2, INPUT);
-  pinMode(A3, INPUT);
-  pinMode(A4, INPUT);
-  pinMode(A5, INPUT);
-  digitalWrite(A0, HIGH);  // set pullup on analog pin
-  digitalWrite(A1, HIGH);
-  digitalWrite(A2, HIGH);
-  digitalWrite(A3, HIGH);
-  digitalWrite(A4, HIGH);
-  digitalWrite(A5, HIGH);
+  for (int pin = A0; pin < A6; pin++) {
+    pinMode(pin, INPUT);
+    digitalWrite(pin, HIGH);  // set pullup on analog pin
+  }
   
   // set digital pins to INPUT_PULLUP
   // https://www.arduino.cc/en/Reference/PinMode
@@ -175,8 +135,7 @@ void enableInput() {
     if (pin == 4 || pin == 7 || pin == 8) {
       continue;
     }
-    // do pins 2 (SDA) and3 (SCL) have pullup resistors?
-    pinMode(pin, INPUT_PULLUP);
+    pinMode(pin, INPUT_PULLUP); // assume pins 2 (SDA) and 3 (SCL) have pullup resistors.
   }  
 }
 
